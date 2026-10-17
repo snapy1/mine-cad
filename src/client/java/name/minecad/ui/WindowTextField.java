@@ -11,7 +11,7 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Simple in-window text input that supports either free-form text or numeric values.
  */
-public class InventoryTabWindowTextField extends InventoryTabWindow {
+public class WindowTextField extends Window {
   public enum InputMode {
     TEXT,
     NUMERIC
@@ -36,7 +36,7 @@ public class InventoryTabWindowTextField extends InventoryTabWindow {
   private int caret;
   private int horizontalOffset;
 
-  public InventoryTabWindowTextField(int width, int height, Component label, InputMode mode) {
+  public WindowTextField(int width, int height, Component label, InputMode mode) {
     super(width, height);
     setTitle(Component.empty());
     this.label = label == null ? Component.empty() : label;

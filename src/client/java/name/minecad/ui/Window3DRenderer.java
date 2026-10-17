@@ -21,7 +21,7 @@ import org.lwjgl.glfw.GLFW;
  *  - while the middle button is held: W/S forward/back (zoom), A/D strafe, E/Q up/down,
  *  - the mouse wheel zooms.
  */
-public class InventoryTabWindow3DRenderer extends InventoryTabWindow {
+public class Window3DRenderer extends Window {
   private static final double ROTATE_SENSITIVITY = 0.35;
   private static final double ACCELERATION = 0.15; // extra rotation multiplier per pixel of mouse movement
   private static final double MAX_ACCELERATION = 6.0;
@@ -64,7 +64,7 @@ public class InventoryTabWindow3DRenderer extends InventoryTabWindow {
   private float defaultYPosition;
   private float defaultZPosition;
 
-  public InventoryTabWindow3DRenderer(int width, int height) {
+  public Window3DRenderer(int width, int height) {
     super(width, height);
     setTitle(Component.literal("3D"));
     setBackgroundColor(0xFFECECEC);

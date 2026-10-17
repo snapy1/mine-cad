@@ -15,7 +15,7 @@ import net.minecraft.sounds.SoundEvents;
  * same hit testing and click dispatching. Create one with window.addButton("Label", () -> ...)
  * or build it yourself and add it with window.addChild(button).
  */
-public class InventoryTabWindowButton extends InventoryTabWindow {
+public class Button extends Window {
   private static final int DEFAULT_WIDTH = 60;
   private static final int DEFAULT_HEIGHT = 20;
 
@@ -33,8 +33,9 @@ public class InventoryTabWindowButton extends InventoryTabWindow {
   private Runnable action;
   private boolean enabled = true;
   private float fontSize = DEFAULT_FONT_SIZE;
+  private int faceColor = FACE;
 
-  public InventoryTabWindowButton(int width, int height, Component label, Runnable action) {
+  public Button(int width, int height, Component label, Runnable action) {
     super(width, height);
     setTitle(Component.empty());
     this.label = label == null ? Component.empty() : label;
@@ -47,7 +48,7 @@ public class InventoryTabWindowButton extends InventoryTabWindow {
     });
   }
 
-  public InventoryTabWindowButton(Component label, Runnable action) {
+  public Button(Component label, Runnable action) {
     this(DEFAULT_WIDTH, DEFAULT_HEIGHT, label, action);
   }
 
@@ -62,6 +63,12 @@ public class InventoryTabWindowButton extends InventoryTabWindow {
 
   public void setEnabled(boolean enabled) {
     this.enabled = enabled;
+  }
+
+  @Override
+  public void setBackgroundColor(int argbColor) {
+    super.setBackgroundColor(argbColor);
+    this.faceColor = argbColor;
   }
 
   public boolean isEnabled() {
@@ -92,7 +99,7 @@ public class InventoryTabWindowButton extends InventoryTabWindow {
     int h = getHeight();
     boolean hovered = enabled && mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
 
-    int face = !enabled ? FACE_DISABLED : hovered ? FACE_HOVER : FACE;
+    int face = !enabled ? FACE_DISABLED : hovered ? lightenColor(faceColor, 0x14) : faceColor;
     graphics.fill(x, y, x + w, y + h, BORDER);
     graphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, face);
     graphics.fill(x + 1, y + 1, x + w - 1, y + 2, HIGHLIGHT);
@@ -120,6 +127,20 @@ public class InventoryTabWindowButton extends InventoryTabWindow {
       }
       textY += lineHeight;
     }
+  }
+
+  private static int lightenColor(int argb, int amount) {
+    int a = (argb >>> 24) & 0xFF;
+    int r = Math.min(255, ((argb >>> 16) & 0xFF) + amount);
+    int g = Math.min(255, ((argb >>> 8) & 0xFF) + amount);
+    int b = Math.min(255, (argb & 0xFF) + amount);
+    return (a << 24) | (r << 16) | (g << 8) | b;
+  }
+
+  public void setSelected(boolean b) {
+
+
+
   }
 }
 

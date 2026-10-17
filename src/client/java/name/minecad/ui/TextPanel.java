@@ -9,7 +9,7 @@ import net.minecraft.network.chat.Component;
 /**
  * A simple text panel used by non-3D tabs (settings/help/exports placeholders).
  */
-public class InventoryTabTextPanel extends InventoryTabWindow {
+public class TextPanel extends Window {
   private static final int DEFAULT_TEXT_COLOR = 0xFF404040;
   private static final float DEFAULT_FONT_SIZE = 1.0F;
   private static final int DEFAULT_SCROLLBAR_SIZE = 6;
@@ -66,7 +66,7 @@ public class InventoryTabTextPanel extends InventoryTabWindow {
 
   private final List<StyledTextLine> lines = new ArrayList<>();
 
-  public InventoryTabTextPanel(int width, int height, Component title) {
+  public TextPanel(int width, int height, Component title) {
     super(width, height);
     setTitle(title == null ? Component.empty() : title);
     setBackgroundColor(0xFFF6F6F6);

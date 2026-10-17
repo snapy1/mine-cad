@@ -6,10 +6,10 @@ import net.minecraft.client.gui.screens.Screen;
  * Tracks which inventory screen (if any) currently has the custom tab window open.
  * Mixins read this to suppress vanilla hover/tooltip behaviour underneath the window.
  */
-public final class InventoryOverlayState {
+public final class OverlayState {
 	private static Screen blockingScreen;
 
-	private InventoryOverlayState() {
+	private OverlayState() {
 	}
 
 	public static void setBlockingScreen(Screen screen) {

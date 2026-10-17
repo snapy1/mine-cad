@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import name.minecad.client.mixin.AbstractContainerScreenAccessor;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
-import org.lwjgl.glfw.GLFW;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.Minecraft;
@@ -13,7 +12,7 @@ import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-public final class InventoryTabManager {
+public final class WindowManager {
     private enum InventoryTabView {
         VANILLA,
         MINE_CAD
@@ -25,21 +24,21 @@ public final class InventoryTabManager {
     private int additionalTabsOffsetX = 200;
     private int additionalTabsOffsetY = 0;
     private InventoryTabView activeInventoryTab = InventoryTabView.VANILLA;
-    private final InventoryTab mineCadTab;
+    private final Tab mineCadTab;
     private Screen currentScreen;
     // Last known window origin and mouse position (updated every frame while a screen is shown).
     private int lastScreenLeft;
     private int lastScreenTop;
     private double lastMouseX;
     private double lastMouseY;
-    private InventoryTabWindow activeDragWindow;
+    private Window activeDragWindow;
     private int activeDragRootX;
     private int activeDragRootY;
     private int activeDragButton = -1;
-    private InventoryTabWindowTextField focusedTextField;
-    private InventoryTabWindowKeybindField focusedKeybindField;
+    private WindowTextField focusedTextField;
+    private WindowKeybindField focusedKeybindField;
 
-    public InventoryTabManager(InventoryTab mineCadTab) {
+    public WindowManager(Tab mineCadTab) {
         this.mineCadTab = mineCadTab;
     }
 
@@ -58,13 +57,13 @@ public final class InventoryTabManager {
 
          currentScreen = screen;
          syncOverlayState();
-         ScreenEvents.remove(screen).register(InventoryOverlayState::clear);
+         ScreenEvents.remove(screen).register(OverlayState::clear);
          // If the screen closes mid-drag, end the drag so the cursor is shown again.
          ScreenEvents.remove(screen).register(closedScreen -> cancelActiveDrag());
 
          int backgroundWidth = creativeInventoryScreen ? 195 : 176;
          int backgroundHeight = creativeInventoryScreen ? 136 : 166;
-         final InventoryTab[] tabs = new InventoryTab[2];
+         final Tab[] tabs = new Tab[2];
 
          // MineCad tab stays inside the same inventory screen.
          tabs[1] = mineCadTab;
@@ -92,8 +91,8 @@ public final class InventoryTabManager {
          Screens.getWidgets(screen).add(tabs[1]);
 
       // Prefer the window attached to this tab so callers can provide custom windows per tab.
-      final InventoryTabWindow configuredWindow = tabs[1].getWindow();
-      final InventoryTabWindow window = configuredWindow != null ? configuredWindow : new InventoryTabWindow(backgroundWidth, backgroundHeight);
+      final Window configuredWindow = tabs[1].getWindow();
+      final Window window = configuredWindow != null ? configuredWindow : new Window(backgroundWidth, backgroundHeight);
       {
         // While a window is being dragged (middle mouse), swallow key presses (E, Q, number keys...)
         // so they don't close the inventory or drop items. Escape still works.
@@ -137,7 +136,7 @@ public final class InventoryTabManager {
             // Check if the click is inside the MineCad tab window area and if the MineCad tab is selected.
             boolean blocked = isWindowInteractionBlocked(tabs[1], window, event.x(), event.y(), b[0], b[1]);
             if (blocked) {
-                InventoryTabWindow.WindowHit hit = window.findWindowAt(b[0], b[1], event.x(), event.y());
+                Window.WindowHit hit = window.findWindowAt(b[0], b[1], event.x(), event.y());
                 if (hit != null && hit.window().beginMouseDrag(event.button())) {
                     activeDragWindow = hit.window();
                     activeDragRootX = b[0];
@@ -145,10 +144,10 @@ public final class InventoryTabManager {
                     activeDragButton = event.button();
                 }
                 // Tell the window chain about the click (topmost window under the cursor gets it).
-                InventoryTabWindow clicked = window.dispatchClick(b[0], b[1], event.x(), event.y(), event.button());
+                Window clicked = window.dispatchClick(b[0], b[1], event.x(), event.y(), event.button());
                 if (event.button() == 0) {
-                    setFocusedTextField(clicked instanceof InventoryTabWindowTextField textField ? textField : null);
-                    setFocusedKeybindField(clicked instanceof InventoryTabWindowKeybindField keybindField ? keybindField : null);
+                    setFocusedTextField(clicked instanceof WindowTextField textField ? textField : null);
+                    setFocusedKeybindField(clicked instanceof WindowKeybindField keybindField ? keybindField : null);
                 }
             } else if (event.button() == 0) {
                 setFocusedTextField(null);
@@ -168,7 +167,7 @@ public final class InventoryTabManager {
         ScreenMouseEvents.allowMouseDrag(screen).register((currentScreen, event, horizontalAmount, verticalAmount) -> {
             int[] b = bounds(currentScreen, backgroundWidth, backgroundHeight);
             if (activeDragWindow != null) {
-                InventoryTabWindow.WindowHit location = window.locate(b[0], b[1], activeDragWindow);
+                Window.WindowHit location = window.locate(b[0], b[1], activeDragWindow);
                 double originX = location != null ? location.x() : b[0];
                 double originY = location != null ? location.y() : b[1];
                 double localX = event.x() - originX;
@@ -250,7 +249,7 @@ public final class InventoryTabManager {
           }
     }
 
-    private void setActiveInventoryTab(InventoryTabView view, InventoryTab inventoryTab, InventoryTab mineCadTab) {
+    private void setActiveInventoryTab(InventoryTabView view, Tab tab, Tab mineCadTab) {
         if (view != InventoryTabView.MINE_CAD) {
             cancelActiveDrag();
             setFocusedTextField(null);
@@ -258,8 +257,8 @@ public final class InventoryTabManager {
         }
         activeInventoryTab = view;
         syncOverlayState();
-        if (inventoryTab != null) {
-            inventoryTab.setSelected(view == InventoryTabView.VANILLA);
+        if (tab != null) {
+            tab.setSelected(view == InventoryTabView.VANILLA);
         }
         if (mineCadTab != null) {
             mineCadTab.setSelected(view == InventoryTabView.MINE_CAD);
@@ -275,7 +274,7 @@ public final class InventoryTabManager {
         }
     }
 
-    private void setFocusedTextField(InventoryTabWindowTextField textField) {
+    private void setFocusedTextField(WindowTextField textField) {
         if (focusedTextField == textField) {
             return;
         }
@@ -288,7 +287,7 @@ public final class InventoryTabManager {
         }
     }
 
-    private void setFocusedKeybindField(InventoryTabWindowKeybindField keybindField) {
+    private void setFocusedKeybindField(WindowKeybindField keybindField) {
         if (focusedKeybindField == keybindField) {
             return;
         }
@@ -319,12 +318,12 @@ public final class InventoryTabManager {
     }
 
     private void syncOverlayState() {
-        InventoryOverlayState.setBlockingScreen(
+        OverlayState.setBlockingScreen(
                 activeInventoryTab == InventoryTabView.MINE_CAD ? currentScreen : null
         );
     }
 
-  private boolean isWindowInteractionBlocked(InventoryTab tab, InventoryTabWindow window, double mouseX, double mouseY, int x, int y) {
+  private boolean isWindowInteractionBlocked(Tab tab, Window window, double mouseX, double mouseY, int x, int y) {
     return activeInventoryTab == InventoryTabView.MINE_CAD
         && tab != null
         && tab.isSelectedTab()
@@ -333,8 +332,8 @@ public final class InventoryTabManager {
   }
 
   /** True while the MineCad tab is open and the mouse is inside the given window (the root window or any nested one). */
-  public boolean isMouseInsideWindow(InventoryTabWindow window) {
-    InventoryTabWindow root = mineCadTab.getWindow();
+  public boolean isMouseInsideWindow(Window window) {
+    Window root = mineCadTab.getWindow();
     return window != null
         && root != null
         && activeInventoryTab == InventoryTabView.MINE_CAD

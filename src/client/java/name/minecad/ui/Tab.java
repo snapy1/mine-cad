@@ -7,7 +7,7 @@ import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
-public class InventoryTab extends AbstractButton {
+public class Tab extends AbstractButton {
 	private static final int TAB_WIDTH = 26;
 	private static final int TAB_HEIGHT = 32;
 
@@ -15,10 +15,10 @@ public class InventoryTab extends AbstractButton {
 	private Runnable action;
 	private boolean selected;
 
-	private InventoryTabWindow window;
+	private Window window;
 
 
-	public InventoryTab(int x, int y, Component name, ItemStack icon, boolean selected, Runnable action, InventoryTabWindow window) {
+	public Tab(int x, int y, Component name, ItemStack icon, boolean selected, Runnable action, Window window) {
 		super(x, y, TAB_WIDTH, TAB_HEIGHT, name);
 		this.icon = icon;
 		this.selected = selected;
@@ -27,7 +27,7 @@ public class InventoryTab extends AbstractButton {
 	}
 
 	// Overloaded constructor without the window parameter -- really only used for testing.
-	public InventoryTab(int x, int y, Component name, ItemStack icon, boolean selected, Runnable action) {
+	public Tab(int x, int y, Component name, ItemStack icon, boolean selected, Runnable action) {
 		this(x, y, name, icon, selected, action, null);
 	}
 
@@ -47,11 +47,11 @@ public class InventoryTab extends AbstractButton {
 		this.action = action;
 	}
 
-	public InventoryTabWindow getWindow() {
+	public Window getWindow() {
 		return window;
 	}
 
-	public void setWindow(InventoryTabWindow window) {
+	public void setWindow(Window window) {
 		this.window = window;
 	}
 

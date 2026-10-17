@@ -11,7 +11,7 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Click to arm, then press a key, mouse button, or wheel to bind.
  */
-public class InventoryTabWindowKeybindField extends InventoryTabWindow {
+public class WindowKeybindField extends Window {
   private static final int BORDER = 0xFF000000;
   private static final int FACE = 0xFFFFFFFF;
   private static final int FACE_ARMED = 0xFFEAF3FF;
@@ -27,7 +27,7 @@ public class InventoryTabWindowKeybindField extends InventoryTabWindow {
   private boolean awaitingInput;
   private float fontScale = 1.0F;
 
-  public InventoryTabWindowKeybindField(int width, int height, Component label) {
+  public WindowKeybindField(int width, int height, Component label) {
     super(width, height);
     setTitle(Component.empty());
     this.label = label == null ? Component.empty() : label;

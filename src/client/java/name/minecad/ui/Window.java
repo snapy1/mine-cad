@@ -22,7 +22,7 @@ import net.minecraft.network.chat.Component;
  * Children without an anchor use the legacy placement: the parent's child offset
  * (see setChildOffset) unless the child has its own offset.
  */
-public class InventoryTabWindow {
+public class Window {
   /** Where a child sits inside the usable area of its parent. */
   public enum Anchor {
     TOP_LEFT(0, 0), TOP(1, 0), TOP_RIGHT(2, 0),
@@ -34,7 +34,7 @@ public class InventoryTabWindow {
     private boolean isEnabled = true;
 
     // Static map tracking which windows are registered to each anchor
-    private static final Map<Anchor, List<InventoryTabWindow>> anchorToWindows = new HashMap<>();
+    private static final Map<Anchor, List<Window>> anchorToWindows = new HashMap<>();
 
     static {
       for (Anchor anchor : Anchor.values()) {
@@ -55,21 +55,21 @@ public class InventoryTabWindow {
       isEnabled = enabled;
       if (!enabled) {
         // Disable all windows registered to this anchor
-        for (InventoryTabWindow window : anchorToWindows.getOrDefault(this, Collections.emptyList())) {
+        for (Window window : anchorToWindows.getOrDefault(this, Collections.emptyList())) {
           window.setVisible(false);
         }
       }
     }
 
     /** Register a window as using this anchor (called automatically by window layout). */
-    static void registerWindow(Anchor anchor, InventoryTabWindow window) {
+    static void registerWindow(Anchor anchor, Window window) {
       if (anchor != null) {
         anchorToWindows.getOrDefault(anchor, new ArrayList<>()).add(window);
       }
     }
 
     /** Unregister a window from this anchor. */
-    static void unregisterWindow(Anchor anchor, InventoryTabWindow window) {
+    static void unregisterWindow(Anchor anchor, Window window) {
       if (anchor != null) {
         anchorToWindows.getOrDefault(anchor, new ArrayList<>()).remove(window);
       }
@@ -79,21 +79,21 @@ public class InventoryTabWindow {
   /** Called when this window is the topmost window under a click. Coordinates are local to the window. */
   @FunctionalInterface
   public interface ClickListener {
-    void onClick(InventoryTabWindow window, double localX, double localY, int button);
+    void onClick(Window window, double localX, double localY, int button);
   }
 
   /** Called when this window's visibility changes (e.g., tab selection). */
   @FunctionalInterface
   public interface TabSelectionListener {
     /** Fired when the window becomes visible (selected as active tab). */
-    void onTabSelected(InventoryTabWindow window);
+    void onTabSelected(Window window);
     
     /** Fired when the window becomes invisible (deselected). */
-    default void onTabDeselected(InventoryTabWindow window) {}
+    default void onTabDeselected(Window window) {}
   }
 
   /** The window under a point, plus that window's absolute screen position. */
-  public record WindowHit(InventoryTabWindow window, int x, int y) {
+  public record WindowHit(Window window, int x, int y) {
   }
 
   private static final int DEFAULT_BACKGROUND_COLOR = 0xFFC6C6C6;
@@ -108,7 +108,7 @@ public class InventoryTabWindow {
 
   private int width;
   private int height;
-  private final List<InventoryTabWindow> children = new ArrayList<>();
+  private final List<Window> children = new ArrayList<>();
   private final String backgroundTextureFilePath;
   private int backgroundColor = DEFAULT_BACKGROUND_COLOR;
   private Component title = Component.empty();
@@ -123,7 +123,7 @@ public class InventoryTabWindow {
   private int padding;
   private int margin;
   private Anchor anchor;
-  private InventoryTabWindow relativeAnchorTarget;
+  private Window relativeAnchorTarget;
   private Anchor relativeAnchorTargetPoint = Anchor.TOP_LEFT;
   private Anchor relativeAnchorOwnPoint = Anchor.TOP_LEFT;
   private boolean hasOffset;
@@ -140,7 +140,7 @@ public class InventoryTabWindow {
   private ClickListener clickListener;
   private TabSelectionListener tabSelectionListener;
 
-  public InventoryTabWindow(int width, int height, String backgroundTextureFilePath) {
+  public Window(int width, int height, String backgroundTextureFilePath) {
     if (width <= 0 || height <= 0) {
       throw new IllegalArgumentException("Window width and height must be positive");
     }
@@ -149,11 +149,11 @@ public class InventoryTabWindow {
     this.backgroundTextureFilePath = backgroundTextureFilePath;
   }
 
-  public InventoryTabWindow(int width, int height) {
+  public Window(int width, int height) {
     this(width, height, (String) null);
   }
 
-  public InventoryTabWindow(int width, int height, InventoryTabWindow nextWindow) {
+  public Window(int width, int height, Window nextWindow) {
     this(width, height);
     if (nextWindow != null) {
       addChild(nextWindow);
@@ -193,6 +193,21 @@ public class InventoryTabWindow {
     }
     this.width = width;
     this.height = height;
+  }
+
+
+  public void setHeight(int height) {
+    if (height <= 0) {
+      throw new IllegalArgumentException("Window height must be positive");
+    }
+    this.height = height;
+  }
+
+  public void setWidth(int width) {
+    if (width <= 0) {
+      throw new IllegalArgumentException("Window width must be positive");
+    }
+    this.width = width;
   }
 
   public int getWidth() {
@@ -235,12 +250,12 @@ public class InventoryTabWindow {
   public void setOnTabSelected(Runnable onSelected) {
     this.tabSelectionListener = new TabSelectionListener() {
       @Override
-      public void onTabSelected(InventoryTabWindow window) {
+      public void onTabSelected(Window window) {
         if (onSelected != null) onSelected.run();
       }
       
       @Override
-      public void onTabDeselected(InventoryTabWindow window) {}
+      public void onTabDeselected(Window window) {}
     };
   }
 
@@ -248,10 +263,10 @@ public class InventoryTabWindow {
   public void setOnTabDeselected(Runnable onDeselected) {
     this.tabSelectionListener = new TabSelectionListener() {
       @Override
-      public void onTabSelected(InventoryTabWindow window) {}
+      public void onTabSelected(Window window) {}
       
       @Override
-      public void onTabDeselected(InventoryTabWindow window) {
+      public void onTabDeselected(Window window) {
         if (onDeselected != null) onDeselected.run();
       }
     };
@@ -261,12 +276,12 @@ public class InventoryTabWindow {
   public void setTabCallbacks(Runnable onSelected, Runnable onDeselected) {
     this.tabSelectionListener = new TabSelectionListener() {
       @Override
-      public void onTabSelected(InventoryTabWindow window) {
+      public void onTabSelected(Window window) {
         if (onSelected != null) onSelected.run();
       }
       
       @Override
-      public void onTabDeselected(InventoryTabWindow window) {
+      public void onTabDeselected(Window window) {
         if (onDeselected != null) onDeselected.run();
       }
     };
@@ -290,9 +305,9 @@ public class InventoryTabWindow {
 
    */
 
-  public InventoryTabWindowButton addButton(String label, Runnable action) {
+  public Button addButton(String label, Runnable action) {
 
-    InventoryTabWindowButton button = new InventoryTabWindowButton(Component.literal(label), action);
+    Button button = new Button(Component.literal(label), action);
 
     addChild(button);
 
@@ -303,7 +318,7 @@ public class InventoryTabWindow {
 
 
   /** Adds a child window (several children are allowed, e.g. a top and a bottom window). Returns the child. */
-  public InventoryTabWindow addChild(InventoryTabWindow child) {
+  public Window addChild(Window child) {
     if (child == null) {
       throw new IllegalArgumentException("Child window cannot be null");
     }
@@ -314,21 +329,21 @@ public class InventoryTabWindow {
     return child;
   }
 
-  public boolean removeChild(InventoryTabWindow child) {
+  public boolean removeChild(Window child) {
     return children.remove(child);
   }
 
-  public List<InventoryTabWindow> getChildren() {
+  public List<Window> getChildren() {
     return Collections.unmodifiableList(children);
   }
 
   /** First child, kept for the older single-chain API. */
-  public InventoryTabWindow getNextWindow() {
+  public Window getNextWindow() {
     return children.isEmpty() ? null : children.get(0);
   }
 
   /** Replaces all children with a single window (older single-chain API). */
-  public void setNextWindow(InventoryTabWindow nextWindow) {
+  public void setNextWindow(Window nextWindow) {
     children.clear();
     if (nextWindow != null) {
       addChild(nextWindow);
@@ -339,11 +354,11 @@ public class InventoryTabWindow {
    * Nests a window under the deepest window reached by following first children, and returns it.
    * Use addChild instead when you want several windows side by side inside the same parent.
    */
-  public InventoryTabWindow appendWindow(InventoryTabWindow window) {
+  public Window appendWindow(Window window) {
     if (window == null) {
       throw new IllegalArgumentException("Appended window cannot be null");
     }
-    InventoryTabWindow tail = this;
+    Window tail = this;
     int depth = 0;
     while (!tail.children.isEmpty() && depth < MAX_NESTING_DEPTH) {
       tail = tail.children.get(0);
@@ -396,7 +411,7 @@ public class InventoryTabWindow {
    * Anchors this window to another child of the same parent (useful for daisy-chaining controls).
    * For example, own TOP to target BOTTOM stacks this window directly underneath the target.
    */
-  public void anchorToWindow(InventoryTabWindow target, Anchor targetPoint, Anchor ownPoint) {
+  public void anchorToWindow(Window target, Anchor targetPoint, Anchor ownPoint) {
     if (target == null) {
       throw new IllegalArgumentException("Target window cannot be null");
     }
@@ -439,28 +454,28 @@ public class InventoryTabWindow {
   }
 
   /** Same as centerWindow(); the parent argument is only validated. */
-  public void centerWindow(InventoryTabWindow parentWindow) {
+  public void centerWindow(Window parentWindow) {
     requireParent(parentWindow);
     centerWindow();
   }
 
-  public void centerWindowX(InventoryTabWindow parentWindow) {
+  public void centerWindowX(Window parentWindow) {
     requireParent(parentWindow);
     centerWindowX();
   }
 
-  public void centerWindowY(InventoryTabWindow parentWindow) {
+  public void centerWindowY(Window parentWindow) {
     requireParent(parentWindow);
     centerWindowY();
   }
 
-  private static void requireParent(InventoryTabWindow parentWindow) {
+  private static void requireParent(Window parentWindow) {
     if (parentWindow == null) {
       throw new IllegalArgumentException("Parent window cannot be null");
     }
   }
 
-  private void applyRelativeSize(InventoryTabWindow parent) {
+  private void applyRelativeSize(Window parent) {
     if (relativeWidth > 0) {
       int usable = parent.width - 2 * parent.padding - 2 * margin;
       width = Math.max(1, (int) Math.round(usable * relativeWidth));
@@ -480,11 +495,11 @@ public class InventoryTabWindow {
     };
   }
 
-  private int resolveChildX(InventoryTabWindow child) {
+  private int resolveChildX(Window child) {
     return resolveChildX(child, new HashSet<>());
   }
 
-  private int resolveChildX(InventoryTabWindow child, Set<InventoryTabWindow> visiting) {
+  private int resolveChildX(Window child, Set<Window> visiting) {
     if (!visiting.add(child)) {
       return resolveChildXIgnoringRelative(child);
     }
@@ -504,11 +519,11 @@ public class InventoryTabWindow {
     return padding + child.margin + (child.hasOffset ? child.offsetX : childOffsetX);
   }
 
-  private int resolveChildY(InventoryTabWindow child) {
+  private int resolveChildY(Window child) {
     return resolveChildY(child, new HashSet<>());
   }
 
-  private int resolveChildY(InventoryTabWindow child, Set<InventoryTabWindow> visiting) {
+  private int resolveChildY(Window child, Set<Window> visiting) {
     if (!visiting.add(child)) {
       return resolveChildYIgnoringRelative(child);
     }
@@ -562,7 +577,7 @@ public class InventoryTabWindow {
     if (clip != null) {
       graphics.enableScissor(x + clip[0], y + clip[1], x + clip[2], y + clip[3]);
     }
-    for (InventoryTabWindow child : children) {
+    for (Window child : children) {
       child.applyRelativeSize(this);
       child.drawWindowRecursive(graphics, font, x + resolveChildX(child), y + resolveChildY(child), mouseX, mouseY, depth + 1);
     }
@@ -642,7 +657,7 @@ public class InventoryTabWindow {
   }
 
   /** Screen position of the target window (this window or a descendant), or null if it is not in this tree. */
-  public WindowHit locate(int rootX, int rootY, InventoryTabWindow target) {
+  public WindowHit locate(int rootX, int rootY, Window target) {
     return locateRecursive(rootX, rootY, target, 0);
   }
 
@@ -659,7 +674,7 @@ public class InventoryTabWindow {
    * Dispatches a click to the topmost window under the cursor.
    * Returns the window that was hit, or null if the click was outside all windows.
    */
-  public InventoryTabWindow dispatchClick(int x, int y, double mouseX, double mouseY, int button) {
+  public Window dispatchClick(int x, int y, double mouseX, double mouseY, int button) {
     WindowHit hit = findWindowAt(x, y, mouseX, mouseY);
     if (hit == null) {
       return null;
@@ -674,7 +689,7 @@ public class InventoryTabWindow {
    * True if the point is inside the given window (which must be this window or one of its descendants),
    * whether or not another window is drawn on top of it. rootX and rootY are this window's screen position.
    */
-  public boolean isPointInside(int rootX, int rootY, InventoryTabWindow target, double mouseX, double mouseY) {
+  public boolean isPointInside(int rootX, int rootY, Window target, double mouseX, double mouseY) {
     WindowHit location = locateRecursive(rootX, rootY, target, 0);
     if (location == null) {
       return false;
@@ -683,7 +698,7 @@ public class InventoryTabWindow {
         && mouseY >= location.y() && mouseY < location.y() + target.height;
   }
 
-  private WindowHit locateRecursive(int x, int y, InventoryTabWindow target, int depth) {
+  private WindowHit locateRecursive(int x, int y, Window target, int depth) {
     if (!visible) {
       return null;
     }
@@ -693,7 +708,7 @@ public class InventoryTabWindow {
     if (this == target) {
       return new WindowHit(this, x, y);
     }
-    for (InventoryTabWindow child : children) {
+    for (Window child : children) {
       child.applyRelativeSize(this);
       WindowHit found = child.locateRecursive(x + resolveChildX(child), y + resolveChildY(child), target, depth + 1);
       if (found != null) {
@@ -715,7 +730,7 @@ public class InventoryTabWindow {
       result = new WindowHit(this, x, y);
     }
     boolean childrenReachable = isInsideChildClip(x, y, mouseX, mouseY);
-    for (InventoryTabWindow child : children) {
+    for (Window child : children) {
       if (!childrenReachable) {
         break;
       }
@@ -738,7 +753,7 @@ public class InventoryTabWindow {
     // Children draw above parents, and later children draw above earlier ones.
     boolean childrenReachable = isInsideChildClip(x, y, mouseX, mouseY);
     for (int i = children.size() - 1; i >= 0 && childrenReachable; i--) {
-      InventoryTabWindow child = children.get(i);
+      Window child = children.get(i);
       child.applyRelativeSize(this);
       int childX = x + resolveChildX(child);
       int childY = y + resolveChildY(child);
@@ -753,11 +768,11 @@ public class InventoryTabWindow {
     return onMouseScroll(mouseX - x, mouseY - y, horizontalAmount, verticalAmount);
   }
 
-  private boolean isRelativeAnchorUsable(InventoryTabWindow child) {
+  private boolean isRelativeAnchorUsable(Window child) {
     return child.relativeAnchorTarget != null && children.contains(child.relativeAnchorTarget);
   }
 
-  private int resolveChildXIgnoringRelative(InventoryTabWindow child) {
+  private int resolveChildXIgnoringRelative(Window child) {
     int extra = child.hasOffset ? child.offsetX : 0;
     if (child.centerX) {
       return axisPosition(1, width, padding, child.width, child.margin) + extra;
@@ -768,7 +783,7 @@ public class InventoryTabWindow {
     return padding + child.margin + (child.hasOffset ? child.offsetX : childOffsetX);
   }
 
-  private int resolveChildYIgnoringRelative(InventoryTabWindow child) {
+  private int resolveChildYIgnoringRelative(Window child) {
     int extra = child.hasOffset ? child.offsetY : 0;
     if (child.centerY) {
       return axisPosition(1, height, padding, child.height, child.margin) + extra;

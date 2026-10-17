@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
  * A compact pane that stacks child controls in a virtual vertical list and scrolls with the mouse wheel
  * (also while hovering the controls) or by dragging the pane.
  */
-public class ScrollableControlPane extends InventoryTabWindow {
+public class ScrollableControlPane extends Window {
   private static final int CONTENT_LEFT = 6;
   private static final int CONTENT_TOP = 22;
   private static final int CONTENT_BOTTOM = 6;
@@ -32,7 +32,7 @@ public class ScrollableControlPane extends InventoryTabWindow {
   private int scrollY;
   private boolean draggingThumb;
 
-  private record Entry(InventoryTabWindow child, int x, int y, int height) {
+  private record Entry(Window child, int x, int y, int height) {
   }
 
   public ScrollableControlPane(int width, int height, Component title) {
@@ -46,11 +46,11 @@ public class ScrollableControlPane extends InventoryTabWindow {
     return getWidth() - CONTENT_LEFT - SCROLLBAR_WIDTH - SCROLLBAR_RIGHT_MARGIN - 3;
   }
 
-  public <T extends InventoryTabWindow> T addScrollableChild(T child, int x, int y) {
+  public <T extends Window> T addScrollableChild(T child, int x, int y) {
     if (child == null) {
       throw new IllegalArgumentException("Scrollable child cannot be null");
     }
-    child.setAnchor(InventoryTabWindow.Anchor.TOP_LEFT);
+    child.setAnchor(Window.Anchor.TOP_LEFT);
     super.addChild(child);
     entries.add(new Entry(child, x, y, child.getHeight()));
     contentHeight = Math.max(contentHeight, y + child.getHeight());
@@ -165,6 +165,10 @@ public class ScrollableControlPane extends InventoryTabWindow {
 
   private int maxScroll() {
     return Math.max(0, contentHeight - viewportHeight());
+  }
+
+  public void SetHeight(int height) {
+    this.setHeight(height);
   }
 }
 
