@@ -44,7 +44,6 @@ public class SettingsUI extends ScrollableControlPane {
     };
 
 
-
     final float settingsScale = 0.85F;
     final int settingsControlWidth = 150; // TODO: May have to change this
     final int settingsControlHeight = 11;
@@ -66,24 +65,47 @@ public class SettingsUI extends ScrollableControlPane {
         super(width, height, title);
         elements = new ArrayList<>();
 
-//        settingsPane = new ScrollableControlPane(width, height, title);
         this.setTitleStyle(0xFF2E2E2E, 0.85F);
 
-        // testing the toggle button.
-        elements.add(new ToggleButton(40, 20, Component.literal("ON"), Component.literal("OFF"), () -> {
-            System.out.println("Toggle left button clicked!");
+
+        // testing text field
+        Window testTextFieldLabelCombo = createSettingsTextFieldWindow("Test Text Field", new WindowTextField(100, settingsControlHeight, null));
+        elements.add(testTextFieldLabelCombo);
+
+        // testing a keybind field.
+        WindowKeybindField testKeybindField = new WindowKeybindField(100, settingsControlHeight, null);
+        Window testKeybindFieldLabelCombo = createKeybindField("Test Keybind Field", testKeybindField);
+        elements.add(testKeybindFieldLabelCombo);
+
+
+        // testing toggle button
+        ToggleButton testToggle = new ToggleButton(40, 20, Component.literal("ON"), Component.literal("OFF"), () -> {
+            System.out.println("Test Toggle left button clicked!");
         }, () -> {
-            System.out.println("Toggle right button clicked!");
-        }, false, false));
+            System.out.println("Test Toggle right button clicked!");
+        }, false, false);
+
+        Window testButtonLabelCombo = createSettingsButtonWindow("Block Selection Highlight", testToggle);
+        elements.add(testButtonLabelCombo);
+
+        Button testButton = new Button(80, 20, Component.literal("Test Button"), () -> {
+            System.out.println("Test Button clicked!");
+        });
+
+        Window testButton2LabelCombo = createSettingsButtonWindow("Test Button", testButton);
+        elements.add(testButton2LabelCombo);
 
         buildButtons();
-//        buildTextFields();
         instantiateElements(elements);
 
     }
 
+    private Font getSettingsFont() {
+        return settingsFont;
+    }
 
-    private void buildButtons(){
+
+    private void buildButtons() {
         elements.add(new Button(100, 20, Component.literal("Test Button 1"), null));
         elements.add(new Button(100, 20, Component.literal("Test Button 2"), null));
         elements.add(new Button(100, 20, Component.literal("Test Button 3"), null));
@@ -92,7 +114,7 @@ public class SettingsUI extends ScrollableControlPane {
         elements.add(new Button(100, 20, Component.literal("Test Button 6"), null));
     }
 
-    private void buildTextFields(){
+    private void buildTextFields() {
         elements.add(new WindowTextField(settingsControlWidth, settingsControlHeight, Component.literal("Test Text Field 1"), null));
         elements.add(new WindowTextField(settingsControlWidth, settingsControlHeight, Component.literal("Test Text Field 2"), null));
         elements.add(new WindowTextField(settingsControlWidth, settingsControlHeight, Component.literal("Test Text Field 3"), null));
@@ -106,49 +128,96 @@ public class SettingsUI extends ScrollableControlPane {
 
         for (Window element : elements) {
             this.addScrollableChild(element, settingsElementXOffset, currentY);
-            currentY += element.getHeight() + settingsElementGap;
+            currentY += element.getHeight() + getExtraSpaceBelow(element) + settingsElementGap;
         }
+    }
 
-
-
-
-//        for (String key : settingKeys) {
-//            if (key.startsWith("keybinds.")) {
-//                WindowKeybindField keybindField = new WindowKeybindField(settingsControlWidth, settingsControlHeight, Component.literal(key), null);
-//                elements.add(keybindField);
-//                keybinds.add(keybindField);
-//            } else {
-//                WindowTextField textField = new WindowTextField(settingsControlWidth, settingsControlHeight, Component.literal(key), null);
-//                elements.add(textField);
-//                settingFields.add(textField);
-//            }
-//
-//
-//        }
+    /**
+     * Text fields hang below their label window (they are offset down by their own height), so that
+     * height has to be reserved in addition to the window's own height.
+     */
+    private int getExtraSpaceBelow(Window element) {
+        int extra = 0;
+        for (Window child : element.getChildren()) {
+            if (child instanceof WindowTextField || child instanceof WindowKeybindField) {
+                extra = Math.max(extra, child.getHeight());
+            }
+        }
+        return extra;
     }
 
 
-    public Window createSettingsButtonWindow(String settingTitle, Button button){
-        Window returnable = null;
+    /**
+     * This function will pair place a button (or toggle button) and a label in a window together so that they are side by side.
+     *
+     * @param settingTitle
+     * @param button
+     * @return
+     */
+    public Window createSettingsButtonWindow(String settingTitle, Button button) {
+        Window returnable = new Window(this.getWidth() - 6, button.getHeight() + 6);
 
+        returnable.setTitle(Component.literal(settingTitle));
+        returnable.setAutoFitTitle(true);
+
+        // match the height of the button to the height of the label window.
+        button.setHeight(returnable.getHeight());
+
+        // subtract the width of the buttons from the width of the returnable window, and set that as the width of the returnable window.
+
+        // if the button is a toggle button, we need to subtract the width of both buttons from the width of the returnable window, since toggle buttons have two buttons side by side.
+        if (button instanceof ToggleButton) {
+            returnable.setWidth(returnable.getWidth() - ((ToggleButton) button).getWidth() * 2);
+        } else {
+            returnable.setWidth(returnable.getWidth() - button.getWidth());
+        }
+
+        // offset the button to the right side of the returnable window, with a 6 pixel gap from the right edge.
+        button.setOffset(returnable.getWidth(), 0);
+
+        returnable.addChild(button);
 
         return returnable;
     }
 
 
+    public Window createSettingsTextFieldWindow(String settingTitle, WindowTextField textField) {
+        Window returnable = new Window(this.getWidth() - 6, (textField.getHeight()) * 2);
+
+        returnable.setTitle(Component.literal(settingTitle));
+        returnable.setAutoFitTitle(true);
+
+        // put the text field directly below the title of the returnable window, and make it the same width as the returnable window.
+
+        textField.setHeight(returnable.getHeight());
+        textField.setWidth(returnable.getWidth());
+
+        textField.setOffset(0, textField.getHeight());
+
+        textField.setAnchor(Anchor.BOTTOM);
+        returnable.addChild(textField);
+        return returnable;
+    }
+
+    public Window createKeybindField(String settingTitle, WindowKeybindField keybindField) {
+        Window returnable = new Window(this.getWidth() - 6, (keybindField.getHeight()) * 2);
+
+        returnable.setTitle(Component.literal(settingTitle));
+        returnable.setAutoFitTitle(true);
+
+        // put the keybind field directly below the title of the returnable window, and make it the same width as the returnable window.
+        keybindField.setHeight(returnable.getHeight());
+        keybindField.setWidth(returnable.getWidth());
+
+        keybindField.setOffset(0, keybindField.getHeight());
+
+        keybindField.setAnchor(Anchor.BOTTOM);
+        returnable.addChild(keybindField);
+        return returnable;
+    }
+
+
 }
-
-
-//    private int calculateSettingsPaneHeight() {
-//        int totalHeight = 0;
-//        for (WindowTextField field : settingFields) {
-//            totalHeight += field.getHeight() + settingsFieldGap;
-//        }
-//        for (WindowKeybindField keybind : keybinds) {
-//            totalHeight += keybind.getHeight() + settingsFieldGap;
-//        }
-//        return totalHeight;
-//    }
 
 
 

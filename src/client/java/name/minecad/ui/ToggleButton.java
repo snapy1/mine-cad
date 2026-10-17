@@ -100,6 +100,18 @@ public class ToggleButton extends Button {
         return isOn;
     }
 
+    @Override
+    public void setHeight(int height) {
+        super.setHeight(height);
+        partnerButton.setHeight(height);
+    }
+
+    @Override
+    public void setWidth(int width) {
+        super.setWidth(width);
+        partnerButton.setWidth(width);
+    }
+
 
 //    public void toggleButtonColor(){
 //        if (isOn) {

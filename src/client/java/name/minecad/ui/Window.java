@@ -105,6 +105,10 @@ public class Window {
   private static final int DEFAULT_CHILD_OFFSET_X = 8;
   private static final int DEFAULT_CHILD_OFFSET_Y = 24;
   private static final int MAX_NESTING_DEPTH = 64;
+  private static final int TITLE_INSET_X = 8;
+  private static final int TITLE_INSET_Y = 8;
+  private static final int TITLE_LINE_GAP = 1;
+  private static final float TITLE_WRAP_SCALE_THRESHOLD = 0.8F;
 
   private int width;
   private int height;
@@ -114,6 +118,7 @@ public class Window {
   private Component title = Component.empty();
   private int titleColor = DEFAULT_TITLE_COLOR;
   private float titleScale = DEFAULT_TITLE_SCALE;
+  private boolean autoFitTitle;
 
   // Default position for children that have no anchor and no offset of their own.
   private int childOffsetX = DEFAULT_CHILD_OFFSET_X;
@@ -185,6 +190,14 @@ public class Window {
   public void setTitleStyle(int argbColor, float scale) {
     setTitleColor(argbColor);
     setTitleScale(scale);
+  }
+
+  /**
+   * Opt in to fitting the title inside this window: it shrinks (or wraps onto two lines) when too long
+   * and is centered. Off by default, in which case the title is drawn at the top-left as usual.
+   */
+  public void setAutoFitTitle(boolean autoFitTitle) {
+    this.autoFitTitle = autoFitTitle;
   }
 
   public void setSize(int width, int height) {
@@ -608,17 +621,184 @@ public class Window {
     graphics.fill(x + 2, y + height - 3, x + width - 2, y + height - 2, SHADOW_COLOR);
     graphics.fill(x + width - 3, y + 2, x + width - 2, y + height - 2, SHADOW_COLOR);
 
-    if (!title.getString().isEmpty()) {
+    drawTitle(graphics, font, x, y);
+  }
+
+  private void drawTitle(GuiGraphicsExtractor graphics, Font font, int x, int y) {
+    if (title.getString().isEmpty()) {
+      return;
+    }
+
+    if (!autoFitTitle) {
+      // Original behaviour: fixed top-left position, optional fixed scale.
       if (Math.abs(titleScale - 1.0F) < 0.0001F) {
-        graphics.text(font, title, x + 8, y + 8, titleColor, false);
+        graphics.text(font, title, x + TITLE_INSET_X, y + TITLE_INSET_Y, titleColor, false);
       } else {
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x + 8, y + 8);
+        graphics.pose().translate(x + TITLE_INSET_X, y + TITLE_INSET_Y);
         graphics.pose().scale(titleScale, titleScale);
         graphics.text(font, title, 0, 0, titleColor, false);
         graphics.pose().popMatrix();
       }
+      return;
     }
+
+    if (font == null) {
+      return;
+    }
+    String rawTitle = title.getString();
+
+    int availableWidth = Math.max(1, width - TITLE_INSET_X * 2);
+    int availableHeight = Math.max(1, height - TITLE_INSET_Y * 2);
+
+    List<String> lines = splitTitleLines(rawTitle);
+    float fittedScale = fitTitleScale(font, lines, availableWidth, availableHeight);
+
+    if (lines.size() == 1 && fittedScale < TITLE_WRAP_SCALE_THRESHOLD) {
+      List<String> wrappedLines = wrapTitleIntoTwoLines(font, rawTitle, availableWidth);
+      float wrappedScale = fitTitleScale(font, wrappedLines, availableWidth, availableHeight);
+      if (wrappedLines.size() > 1 && wrappedScale > fittedScale) {
+        lines = wrappedLines;
+        fittedScale = wrappedScale;
+      }
+    }
+
+    fittedScale = Math.min(fittedScale, titleScale);
+    int lineHeight = Math.max(1, Math.round(font.lineHeight * fittedScale));
+    int totalHeight = lineHeight * lines.size() + TITLE_LINE_GAP * Math.max(0, lines.size() - 1);
+    int startY = y + TITLE_INSET_Y + Math.max(0, (availableHeight - totalHeight) / 2);
+
+    for (int i = 0; i < lines.size(); i++) {
+      String line = lines.get(i);
+      int lineWidth = Math.round(font.width(line) * fittedScale);
+      int lineX = x + TITLE_INSET_X + Math.max(0, (availableWidth - lineWidth) / 2);
+      int lineY = startY + i * (lineHeight + TITLE_LINE_GAP);
+      drawTitleLine(graphics, font, line, lineX, lineY, fittedScale);
+    }
+  }
+
+  private void drawTitleLine(GuiGraphicsExtractor graphics, Font font, String line, int x, int y, float scale) {
+    if (line.isEmpty()) {
+      return;
+    }
+    if (Math.abs(scale - 1.0F) < 0.0001F) {
+      graphics.text(font, Component.literal(line), x, y, titleColor, false);
+      return;
+    }
+    graphics.pose().pushMatrix();
+    graphics.pose().translate(x, y);
+    graphics.pose().scale(scale, scale);
+    graphics.text(font, Component.literal(line), 0, 0, titleColor, false);
+    graphics.pose().popMatrix();
+  }
+
+  private float fitTitleScale(Font font, List<String> lines, int availableWidth, int availableHeight) {
+    float scale = titleScale;
+    int widestLine = 0;
+    for (String line : lines) {
+      widestLine = Math.max(widestLine, font.width(line));
+    }
+    if (widestLine > 0) {
+      scale = Math.min(scale, (float) availableWidth / widestLine);
+    }
+
+    int lineCount = Math.max(1, lines.size());
+    int totalLineHeight = font.lineHeight * lineCount + TITLE_LINE_GAP * Math.max(0, lineCount - 1);
+    if (totalLineHeight > 0) {
+      scale = Math.min(scale, (float) availableHeight / totalLineHeight);
+    }
+
+    return Math.max(0.25F, scale);
+  }
+
+  private static List<String> splitTitleLines(String text) {
+    if (text.contains("\n")) {
+      List<String> lines = new ArrayList<>();
+      Collections.addAll(lines, text.split("\\n", -1));
+      return lines;
+    }
+    List<String> lines = new ArrayList<>();
+    lines.add(text);
+    return lines;
+  }
+
+  private static List<String> wrapTitleIntoTwoLines(Font font, String text, int maxWidth) {
+    List<String> words = splitWords(text);
+    if (words.size() <= 1) {
+      return wrapTextByCharacter(font, text, maxWidth);
+    }
+
+    List<String> best = null;
+    int bestWidth = Integer.MAX_VALUE;
+    for (int i = 1; i < words.size(); i++) {
+      String first = joinWords(words, 0, i);
+      String second = joinWords(words, i, words.size());
+      int firstWidth = font.width(first);
+      int secondWidth = font.width(second);
+      int widest = Math.max(firstWidth, secondWidth);
+      if (widest < bestWidth) {
+        bestWidth = widest;
+        best = List.of(first, second);
+      }
+      if (firstWidth <= maxWidth && secondWidth <= maxWidth) {
+        return List.of(first, second);
+      }
+    }
+    return best == null ? wrapTextByCharacter(font, text, maxWidth) : best;
+  }
+
+  private static List<String> splitWords(String text) {
+    String trimmed = text == null ? "" : text.trim();
+    if (trimmed.isEmpty()) {
+      return List.of("");
+    }
+    String[] words = trimmed.split("\\s+");
+    List<String> result = new ArrayList<>();
+    Collections.addAll(result, words);
+    return result;
+  }
+
+  private static String joinWords(List<String> words, int startInclusive, int endExclusive) {
+    StringBuilder builder = new StringBuilder();
+    for (int i = startInclusive; i < endExclusive; i++) {
+      if (builder.length() > 0) {
+        builder.append(' ');
+      }
+      builder.append(words.get(i));
+    }
+    return builder.toString();
+  }
+
+  private static List<String> wrapTextByCharacter(Font font, String text, int maxWidth) {
+    List<String> lines = new ArrayList<>();
+    if (text == null || text.isEmpty()) {
+      lines.add("");
+      return lines;
+    }
+
+    int splitPoint = text.length() / 2;
+    int bestSplit = Math.max(1, splitPoint);
+    int bestWidth = Integer.MAX_VALUE;
+    for (int i = 1; i < text.length(); i++) {
+      String first = text.substring(0, i).trim();
+      String second = text.substring(i).trim();
+      if (first.isEmpty() || second.isEmpty()) {
+        continue;
+      }
+      int widest = Math.max(font.width(first), font.width(second));
+      if (widest < bestWidth) {
+        bestWidth = widest;
+        bestSplit = i;
+      }
+      if (font.width(first) <= maxWidth && font.width(second) <= maxWidth) {
+        bestSplit = i;
+        break;
+      }
+    }
+
+    lines.add(text.substring(0, bestSplit).trim());
+    lines.add(text.substring(bestSplit).trim());
+    return lines;
   }
 
   // ---------------------------------------------------------------- hit testing and clicks

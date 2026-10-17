@@ -36,6 +36,16 @@ public class WindowTextField extends Window {
   private int caret;
   private int horizontalOffset;
 
+  /** Text field with no label and free-form text input. */
+  public WindowTextField(int width, int height) {
+    this(width, height, null, InputMode.TEXT);
+  }
+
+  /** Text field with no label. */
+  public WindowTextField(int width, int height, InputMode mode) {
+    this(width, height, null, mode);
+  }
+
   public WindowTextField(int width, int height, Component label, InputMode mode) {
     super(width, height);
     setTitle(Component.empty());

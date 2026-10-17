@@ -388,9 +388,8 @@ public class MineCadClient implements ClientModInitializer {
 		});
 		/** END 3D VIEW TAB */
 
-
 		/** SETTINGS TAB */
-		SettingsUI testSettingUI = new SettingsUI(100, 100, Component.literal("Test Settings UI"));
+		SettingsUI testSettingUI = new SettingsUI(mainWindow.getWidth()-6, 100, Component.literal("Test Settings UI"));
 
 
 
